@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #080b12;
+      --surface: #0f1420;
+      --border: #1e2535;
+      --accent: #00e5a0;
+      --accent2: #7c6fff;
+      --warn: #ff6b35;
+      --text: #e8eaf2;
+      --muted: #5a6280;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 100px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 0 24px;
+    }
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .header h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Status Card */
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: all 0.4s ease;
+    }
+
+    .status-card.owner-on::before {
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+    }
+
+    .status-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .status-label {
+      font-size: 0.7rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .status-badge.ai-active {
+      background: rgba(0,229,160,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(0,229,160,0.2);
+    }
+
+    .status-badge.owner-active {
+      background: rgba(34,197,94,0.1);
+      color: #22c55e;
+      border: 1px solid rgba(34,197,94,0.2);
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .status-main {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .status-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-bottom: 20px;
+    }
+
+    .toggle-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.3px;
+    }
+
+    .toggle-btn.go-online {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff;
+    }
+
+    .toggle-btn.go-offline {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000;
+    }
+
+    .toggle-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .toggle-btn:active { transform: translateY(0); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-num.warn { color: var(--warn); }
+    .stat-num.purple { color: var(--accent2); }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Orders section */
+    .section-title {
+      font-size: 0.7rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .order-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      transition: border-color 0.2s;
+    }
+
+    .order-card:hover { border-color: var(--accent); }
+
+    .order-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .order-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--accent);
+    }
+
+    .order-badge {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+      text-transform: uppercase;
+    }
+
+    .badge-pending    { background: rgba(255,107,53,0.15); color: var(--warn); }
+    .badge-completed  { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .badge-pre-ordered { background: rgba(124,111,255,0.15); color: var(--accent2); }
+    .badge-cancelled  { background: rgba(100,100,100,0.15); color: #666; }
+
+    .order-product {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .order-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 10px;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .action-btn.complete { border-color: #22c55e; color: #22c55e; }
+    .action-btn.complete:hover { background: rgba(34,197,94,0.1); }
+    .action-btn.cancel { border-color: var(--warn); color: var(--warn); }
+    .action-btn.cancel:hover { background: rgba(255,107,53,0.1); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .empty-state .emoji { font-size: 2.5rem; margin-bottom: 8px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 10px 20px;
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: transform 0.3s ease;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🎮</div>
+    <div>
+      <h1>GameZone AI</h1>
+      <p>Owner Control Panel</p>
+    </div>
+  </div>
+
+  <!-- Status Card -->
+  <div class="status-card" id="statusCard">
+    <div class="status-top">
+      <span class="status-label">Bot Status</span>
+      <div class="status-badge ai-active" id="statusBadge">
+        <div class="dot"></div>
+        <span id="badgeText">AI Active</span>
+      </div>
+    </div>
+    <div class="status-main" id="statusMain">🤖 AI is handling customers</div>
+    <div class="status-sub" id="statusSub">You're offline. Every customer message is being answered automatically by Groq AI.</div>
+    <button class="toggle-btn go-online" id="toggleBtn" onclick="toggleStatus()">
+      ✅ Go Online — Take Over
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-num" id="totalOrders">0</div>
+      <div class="stat-label">Orders</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num warn" id="pendingOrders">0</div>
+      <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num purple" id="preOrders">0</div>
+      <div class="stat-label">Pre-Orders</div>
+    </div>
+  </div>
+
+  <!-- Orders -->
+  <div class="section-title">Orders</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="filterOrders('all', this)">All</button>
+    <button class="tab" onclick="filterOrders('pending', this)">Pending</button>
+    <button class="tab" onclick="filterOrders('pre-ordered', this)">Pre-Orders</button>
+    <button class="tab" onclick="filterOrders('completed', this)">Done</button>
+  </div>
+
+  <div class="orders-list" id="ordersList">
+    <div class="empty-state">
+      <div class="emoji">📭</div>
+      <div>No orders yet — AI is ready!</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">✅ Done!</div>
+
+<script>
+  const SERVER = window.location.origin;
+  let isOnline = false;
+  let allOrders = [];
+  let currentFilter = 'all';
+
+  async function fetchStatus() {
+    try {
+      const r = await fetch(`${SERVER}/owner/status`);
+      const d = await r.json();
+      isOnline = d.ownerOnline;
+      updateStatusUI();
+    } catch(e) {}
+  }
+
+  async function toggleStatus() {
+    const ep = isOnline ? '/owner/offline' : '/owner/online';
+    try {
+      await fetch(`${SERVER}${ep}`, { method: 'POST' });
+      isOnline = !isOnline;
+      updateStatusUI();
+      showToast(isOnline ? '✅ You are now online!' : '🤖 AI is now active!');
+    } catch(e) {
+      showToast('❌ Could not reach server');
+    }
+  }
+
+  function updateStatusUI() {
+    const card = document.getElementById('statusCard');
+    const badge = document.getElementById('statusBadge');
+    const badgeText = document.getElementById('badgeText');
+    const main = document.getElementById('statusMain');
+    const sub = document.getElementById('statusSub');
+    const btn = document.getElementById('toggleBtn');
+
+    if (isOnline) {
+      card.classList.add('owner-on');
+      badge.className = 'status-badge owner-active';
+      badgeText.textContent = 'Owner Online';
+      main.textContent = '👤 You are handling customers';
+      sub.textContent = 'AI is paused. Reply to customers directly on WhatsApp. Tap below to hand off.';
+      btn.className = 'toggle-btn go-offline';
+      btn.textContent = '🤖 Go Offline — Let AI Handle It';
+    } else {
+      card.classList.remove('owner-on');
+      badge.className = 'status-badge ai-active';
+      badgeText.textContent = 'AI Active';
+      main.textContent = '🤖 AI is handling customers';
+      sub.textContent = "You're offline. Every customer message is being answered automatically by Groq AI.";
+      btn.className = 'toggle-btn go-online';
+      btn.textContent = '✅ Go Online — Take Over';
+    }
+  }
+
+  async function fetchOrders() {
+    try {
+      const r = await fetch(`${SERVER}/orders`);
+      allOrders = await r.json();
+      updateStats();
+      renderOrders();
+    } catch(e) {}
+  }
+
+  function updateStats() {
+    document.getElementById('totalOrders').textContent = allOrders.length;
+    document.getElementById('pendingOrders').textContent =
+      allOrders.filter(o => o.status === 'pending').length;
+    document.getElementById('preOrders').textContent =
+      allOrders.filter(o => o.status === 'pre-ordered').length;
+  }
+
+  function filterOrders(filter, el) {
+    currentFilter = filter;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    renderOrders();
+  }
+
+  function renderOrders() {
+    const list = document.getElementById('ordersList');
+    let orders = allOrders;
+
+    if (currentFilter !== 'all') {
+      orders = allOrders.filter(o => o.status === currentFilter);
+    }
+
+    if (!orders.length) {
+      list.innerHTML = `<div class="empty-state"><div class="emoji">📭</div><div>No ${currentFilter === 'all' ? '' : currentFilter + ' '}orders yet</div></div>`;
+      return;
+    }
+
+    list.innerHTML = orders.map(o => {
+      const d = new Date(o.timestamp);
+      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const badgeClass = {
+        pending: 'badge-pending',
+        completed: 'badge-completed',
+        'pre-ordered': 'badge-pre-ordered',
+        cancelled: 'badge-cancelled'
+      }[o.status] || 'badge-pending';
+
+      const actions = o.status === 'pending'
+        ? `<button class="action-btn complete" onclick="updateOrderStatus('${o.id}', 'completed')">✓ Complete</button>
+           <button class="action-btn cancel" onclick="updateOrderStatus('${o.id}', 'cancelled')">✕ Cancel</button>`
+        : o.status === 'pre-ordered'
+        ? `<button class="action-btn complete" onclick="updateOrderStatus('${o.id}', 'pending')">→ Move to Pending</button>`
+        : '';
+
+      return `
+        <div class="order-card" id="order-${o.id}">
+          <div class="order-top">
+            <span class="order-id">${o.id}</span>
+            <span class="order-badge ${badgeClass}">${o.status}</span>
+          </div>
+          <div class="order-product">${o.product}</div>
+          <div class="order-meta">📱 ${o.phone} · 🎮 ${o.gameId} · ${o.price} · ${date} ${time}</div>
+          ${actions ? `<div class="order-actions">${actions}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  async function updateOrderStatus(id, status) {
+    try {
+      await fetch(`${SERVER}/orders/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      showToast(`Order marked as ${status}`);
+      fetchOrders();
+    } catch(e) {
+      showToast('❌ Failed to update');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // Init & auto-refresh
+  fetchStatus();
+  fetchOrders();
+  setInterval(fetchOrders, 10000);
+  setInterval(fetchStatus, 5000);
+</script>
+</body>
+</html>

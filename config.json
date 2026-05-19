@@ -1,0 +1,76 @@
+{
+  "businessName": "Phonix Store",
+  "businessDescription": "Trusted WhatsApp-based gaming top-up store. Fast delivery, best prices, 24/7 AI support.",
+
+  "groqApiKey": "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",
+  "groqModel": "llama-3.3-70b-versatile",
+
+  "products": [
+    {
+      "name": "Mobile Legends - 86 Diamonds",
+      "price": "₹45",
+      "description": "86 Diamonds for MLBB",
+      "available": true
+    },
+    {
+      "name": "Mobile Legends - 172 Diamonds",
+      "price": "₹85",
+      "description": "172 Diamonds for MLBB",
+      "available": true
+    },
+    {
+      "name": "Mobile Legends - 257 Diamonds",
+      "price": "₹125",
+      "description": "257 Diamonds for MLBB",
+      "available": true
+    },
+    {
+      "name": "Free Fire - 100 Diamonds",
+      "price": "₹40",
+      "description": "100 Diamonds for Garena Free Fire",
+      "available": true
+    },
+    {
+      "name": "Free Fire - 310 Diamonds",
+      "price": "₹110",
+      "description": "310 Diamonds for Garena Free Fire",
+      "available": true
+    },
+    {
+      "name": "BGMI - 60 UC",
+      "price": "₹75",
+      "description": "60 Unknown Cash for BGMI",
+      "available": true
+    },
+    {
+      "name": "BGMI - 325 UC",
+      "price": "₹380",
+      "description": "325 UC for BGMI",
+      "available": true
+    },
+    {
+      "name": "Genshin Impact - 60 Primogems",
+      "price": "₹90",
+      "description": "60 Primogems via Genesis Crystals top-up",
+      "available": false,
+      "availableDate": "2025-02-01"
+    },
+    {
+      "name": "Valorant - 475 VP",
+      "price": "₹350",
+      "description": "475 Valorant Points",
+      "available": false,
+      "availableDate": "2025-02-01"
+    }
+  ],
+
+  "preOrderPolicy": "Customers can pre-order products marked as coming soon. They can pay upfront to lock in the current price, or choose to pay when the product becomes available. Pre-orders are fulfilled within 24 hours of availability.",
+
+  "paymentInstructions": "Pay via UPI: gamezone@upi — After payment, send the screenshot here and your top-up will be delivered within 5 minutes ⚡",
+
+  "language": "English (switch to Hindi or Bengali if customer writes in those languages)",
+
+  "twilioAccountSid": "YOUR_TWILIO_ACCOUNT_SID",
+  "twilioAuthToken": "YOUR_TWILIO_AUTH_TOKEN",
+  "twilioWhatsAppNumber": "+14155238886"
+}
