@@ -9,8 +9,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// ─── Load config ───────────────────────────────────────────────────────────
+// ─── Load config (env vars override config.json) ───────────────────────────
 const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+
+// Env vars take priority over config.json (for Render/Railway deployment)
+if (process.env.GROQ_API_KEY)           config.groqApiKey           = process.env.GROQ_API_KEY;
+if (process.env.TWILIO_ACCOUNT_SID)     config.twilioAccountSid     = process.env.TWILIO_ACCOUNT_SID;
+if (process.env.TWILIO_AUTH_TOKEN)      config.twilioAuthToken      = process.env.TWILIO_AUTH_TOKEN;
+if (process.env.TWILIO_WHATSAPP_NUMBER) config.twilioWhatsAppNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 
 // ─── Orders storage (free JSON file) ──────────────────────────────────────
 const ORDERS_FILE = "./orders.json";
@@ -170,6 +176,7 @@ app.post("/orders/:id/status", (req, res) => {
 });
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
+app.get("/", (req, res) => res.redirect("/dashboard"));
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "dashboard.html")));
 
 const PORT = process.env.PORT || 3000;
