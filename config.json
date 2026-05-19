@@ -2,7 +2,7 @@
   "businessName": "Phonix Store",
   "businessDescription": "Trusted WhatsApp-based gaming top-up store. Fast delivery, best prices, 24/7 AI support.",
 
-  "groqApiKey": "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",
+  "groqApiKey": "",
   "groqModel": "llama-3.3-70b-versatile",
 
   "products": [
@@ -70,7 +70,7 @@
 
   "language": "English (switch to Hindi or Bengali if customer writes in those languages)",
 
-  "twilioAccountSid": "YOUR_TWILIO_ACCOUNT_SID",
-  "twilioAuthToken": "YOUR_TWILIO_AUTH_TOKEN",
+  "twilioAccountSid": "AC952d384fbd4188327dcac31b164dcac7",
+  "twilioAuthToken": "931d184b1534c161dc62277b3c38cd06",
   "twilioWhatsAppNumber": "+14155238886"
 }
