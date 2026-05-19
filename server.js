@@ -206,9 +206,11 @@ app.post("/webhook", async (req, res) => {
   res.send("<Response></Response>");
 
   const from = req.body.From?.replace("whatsapp:", "");
-  const message = req.body.Body?.trim();
-  if (!from || !message) return;
-  console.log(`📩 ${from}: ${message}`);
+  const message = req.body.Body?.trim() || "";
+  const numMedia = parseInt(req.body.NumMedia || "0");
+  const imageUrl = numMedia > 0 ? req.body.MediaUrl0 : null;
+  if (!from || (!message && !imageUrl)) return;
+  console.log(`📩 ${from}: ${message || "[image only]"}`);
 
   if (ownerOnline) {
     // Send handoff — max once every 3 mins per user so they can't spam trigger it
@@ -226,12 +228,8 @@ app.post("/webhook", async (req, res) => {
   }
 
   try {
-    // Check if customer sent an image
-    const numMedia = parseInt(req.body.NumMedia || "0");
-    const imageUrl = numMedia > 0 ? req.body.MediaUrl0 : null;
-    if (imageUrl) console.log(`🖼️ Image received from ${from}: ${imageUrl}`);
-
-    const reply = await askGroq(from, message || "", imageUrl);
+    if (imageUrl) console.log(`🖼️ Image received from ${from}`);
+    const reply = await askGroq(from, message, imageUrl);
     console.log(`🤖 → ${from}: ${reply}`);
     await sendWhatsAppMessage(from, reply);
   } catch (err) {
