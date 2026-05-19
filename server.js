@@ -40,14 +40,22 @@ function generateOrderId() {
 let ownerOnline = false;
 const conversationHistory = {};
 
-// ─── Call Groq AI ──────────────────────────────────────────────────────────
-async function askGroq(senderNumber, userMessage) {
+// ─── Download image from Twilio and convert to base64 ─────────────────────
+async function getImageBase64(mediaUrl) {
+  const response = await axios.get(mediaUrl, {
+    responseType: "arraybuffer",
+    auth: { username: config.twilioAccountSid, password: config.twilioAuthToken },
+  });
+  const base64 = Buffer.from(response.data).toString("base64");
+  const mimeType = response.headers["content-type"] || "image/jpeg";
+  return { base64, mimeType };
+}
+
+// ─── Call Groq AI (supports text + images) ─────────────────────────────────
+async function askGroq(senderNumber, userMessage, imageUrl = null) {
   if (!conversationHistory[senderNumber]) {
     conversationHistory[senderNumber] = [];
   }
-
-  conversationHistory[senderNumber].push({ role: "user", content: userMessage });
-  const recentHistory = conversationHistory[senderNumber].slice(-20);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -78,12 +86,50 @@ RULES:
   [ORDER_CONFIRMED: product="X", gameId="Y", type="order|preorder", price="Z"]
 - Don't make up products. If unsure, say "Let me check with the owner!"
 - Language: ${config.language}
+
+IMAGE RULES (when customer sends an image):
+- If it looks like a PAYMENT SCREENSHOT: confirm you received it, tell them top-up will be delivered within 5 mins ⚡, mark order as paid
+- If it looks like a GAME SCREENSHOT or PROFILE: read their game ID, username, or rank from it if visible and use that info
+- If it looks like a PRODUCT REQUEST image (e.g. screenshot of a game item): identify what they want and help them order it
+- If it's something else: describe what you see and ask how you can help
+- Always be specific about what you actually see in the image
 `;
+
+  // Build user message content — text + optional image
+  let userContent;
+  if (imageUrl) {
+    try {
+      const { base64, mimeType } = await getImageBase64(imageUrl);
+      userContent = [
+        {
+          type: "image_url",
+          image_url: { url: `data:${mimeType};base64,${base64}` },
+        },
+        {
+          type: "text",
+          text: userMessage || "I sent you an image.",
+        },
+      ];
+    } catch (err) {
+      console.error("❌ Image fetch failed:", err.message);
+      userContent = userMessage + " [customer sent an image but it could not be loaded]";
+    }
+  } else {
+    userContent = userMessage;
+  }
+
+  conversationHistory[senderNumber].push({ role: "user", content: userContent });
+  const recentHistory = conversationHistory[senderNumber].slice(-20);
+
+  // Use vision model when image is present
+  const model = imageUrl
+    ? "meta-llama/llama-4-scout-17b-16e-instruct"
+    : (config.groqModel || "llama-3.3-70b-versatile");
 
   const response = await axios.post(
     "https://api.groq.com/openai/v1/chat/completions",
     {
-      model: config.groqModel || "llama-3.3-70b-versatile",
+      model,
       messages: [{ role: "system", content: systemPrompt }, ...recentHistory],
       max_tokens: 500,
       temperature: 0.7,
@@ -98,6 +144,11 @@ RULES:
 
   const reply = response.data.choices[0].message.content;
 
+  // Store text-only version in history (base64 images are too large to keep)
+  conversationHistory[senderNumber][conversationHistory[senderNumber].length - 1] = {
+    role: "user",
+    content: userMessage || "[sent an image]",
+  };
   conversationHistory[senderNumber].push({ role: "assistant", content: reply });
 
   // Auto-log confirmed orders
@@ -119,7 +170,6 @@ RULES:
     console.log(`📦 Logged ${orderMatch[3]}: ${orderId} | ${orderMatch[1]} | ${senderNumber}`);
   }
 
-  // Strip the internal tag before sending
   return reply.replace(/\[ORDER_CONFIRMED:[^\]]+\]/g, "").trim();
 }
 
@@ -139,16 +189,49 @@ async function sendWhatsAppMessage(to, message) {
   );
 }
 
+// ─── Handoff messages when owner is online ─────────────────────────────────
+const handoffMessages = [
+  "Hey! 👋 Rn Laiz is back online right now. DM him directly at +918798471776 and he'll sort you out! 🎮",
+  "Wassup! Rn Laiz just came online 🔥 Hit him up at +918798471776 for your order!",
+  "Good news! Rn Laiz is available now 💪 Just DM +918798471776 — he's got you!",
+  "Yo! The boss is back 😎 Reach Rn Laiz at +918798471776 — he's online and ready!",
+  "Rn Laiz is online bro! 🎮⚡ Drop him a message at +918798471776 and he'll handle it personally!",
+];
+const handoffSentAt = {};
+
 // ─── Webhook ────────────────────────────────────────────────────────────────
 app.post("/webhook", async (req, res) => {
-  res.sendStatus(200);
+  // Empty TwiML response — stops Twilio sending "OK" auto-replies
+  res.set("Content-Type", "text/xml");
+  res.send("<Response></Response>");
+
   const from = req.body.From?.replace("whatsapp:", "");
   const message = req.body.Body?.trim();
   if (!from || !message) return;
   console.log(`📩 ${from}: ${message}`);
-  if (ownerOnline) return console.log("👤 Owner online — skipping AI");
+
+  if (ownerOnline) {
+    // Send handoff — max once every 3 mins per user so they can't spam trigger it
+    const now = Date.now();
+    const lastSent = handoffSentAt[from] || 0;
+    if (now - lastSent > 3 * 60 * 1000) {
+      handoffSentAt[from] = now;
+      const msg = handoffMessages[Math.floor(Math.random() * handoffMessages.length)];
+      await sendWhatsAppMessage(from, msg);
+      console.log(`📤 Handoff → ${from}`);
+    } else {
+      console.log(`⏳ Cooldown active for ${from}`);
+    }
+    return;
+  }
+
   try {
-    const reply = await askGroq(from, message);
+    // Check if customer sent an image
+    const numMedia = parseInt(req.body.NumMedia || "0");
+    const imageUrl = numMedia > 0 ? req.body.MediaUrl0 : null;
+    if (imageUrl) console.log(`🖼️ Image received from ${from}: ${imageUrl}`);
+
+    const reply = await askGroq(from, message || "", imageUrl);
     console.log(`🤖 → ${from}: ${reply}`);
     await sendWhatsAppMessage(from, reply);
   } catch (err) {
